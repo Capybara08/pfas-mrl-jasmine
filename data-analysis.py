@@ -3,6 +3,9 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import geopandas as gpd
 import contextily as ctx
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+from statsmodels.tools.tools import add_constant
+import numpy as np
 
 df = pd.read_csv("pfas-data.csv")
 
@@ -19,6 +22,7 @@ sns.heatmap(
     yticklabels=False
 )
 plt.title("Heatmap of Missing PFAS Data")
+plt.close()
 #plt.show()
 
 # Load geospatial files
@@ -151,7 +155,8 @@ sns.heatmap(
     cbar=False,
     yticklabels=False
 )
-
+plt.title("Heatmap of Missing Environmental Data") # Added title for clarity
+plt.close()
 # Correlation matrix / heatmap
 pfas_corr_spear = df_pfas.corr(method='spearman') # nonlinear, monotonic relationships
 pfas_corr_pear = df_pfas.corr(method='pearson')
@@ -195,19 +200,26 @@ plt.close()
 per_basin_counts = df.groupby('gm_gis_dwr_basin').size()
 
 # 2. Plot the histogram of those counts
-per_basin_counts.hist()
+per_basin_counts.hist(bins=50, edgecolor='black')
 plt.title("Histogram of Data Per Hydrogeologic Basin")
 plt.xlabel("Number of Data Points in a Basin")
 plt.ylabel("Frequency of Basins")
 plt.show()
-# Data distribution for same-well samples
 
-# Data normalization
+# Data normalization --> I have a script already for this...
 
 # Outliers and data distributions; boxplots and histograms
 
-# Collinearity --> in this case, I believe we are leveraging collinearity using co-occurence
+# VIF
+numeric_df = df.select_dtypes(include=[np.number]).dropna()
+X = add_constant(numeric_df)
 
+vif_df = pd.DataFrame()
+vif_df["feature"] = X.columns
+vif_df["VIF"] = [variance_inflation_factor(X.values, i) for i in range(X.shape[1])]
+
+# 4. Filter out the constant row and look at the feature VIFs
+print(vif_df[vif_df["feature"] != "const"])
 """
 Bc sm features, create a script that automatically decides the normalization strategy
 """
